@@ -1,0 +1,30 @@
+docker compose build --no-cache
+docker compose up -d
+
+docker-compose exec db psql -U gallery_user -d gallery_db -c "\l"		# gallery_db exists & owned by gallery_user
+
+docker compose logs db # FATAL:  database "gallery_user" does not exist
+# 1) not exist?
+# 2) why `gallery_user` ?	this is supposed to be the user, and not db
+
+# .env file: -------------------------
+POSTGRES_USER=gallery_user
+POSTGRES_PASSWORD=gallery_password
+POSTGRES_DB=gallery_db
+DB_HOST=db
+
+
+# and in settings.py -----------------
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB'),
+        'USER': os.getenv('POSTGRES_USER'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
+        'HOST': 'db',
+        'PORT': '5432',
+    }
+}
+
+
+Q: While the database gallery_db exists, the application is mistakenly trying to connect to gallery_user as if it were a database. WHY?
