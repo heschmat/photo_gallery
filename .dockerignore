@@ -1,0 +1,30 @@
+# Ignore __pycache__ directories and compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore virtual environments
+venv/
+env/
+
+# Ignore environment files (exclude secrets)
+.env
+.env.*
+
+# Ignore static and media files (if they are generated at runtime)
+staticfiles/
+media/
+
+# Ignore logs and temporary files
+*.log
+*.tmp
+
+# Ignore IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+
+# git & docker
+.git
+.gitignore
+.docker
