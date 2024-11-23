@@ -40,11 +40,15 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # 3rd party apps:
+    # 3rd party apps: ------------------------
     'rest_framework',
     'drf_spectacular',
+    # Although, built-in into rest_framework,
+    # `rest_framework.authtoken` is a separate django app.
+    # Hence, to add the support for authentication tokens, we need to install the app.
+    'rest_framework.authtoken',
 
-    # local apps:
+    # local apps: ----------------------------
     'core',
     'user',
 ]

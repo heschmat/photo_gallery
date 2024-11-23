@@ -13,6 +13,7 @@ from rest_framework.test import APIClient
 # app_name = user;
 # `name` passed to `path` is `create`
 CREATE_USER_URL = reverse('user:create')
+TOKEN_URL = reverse('user:token')
 
 
 def create_user(**params):
@@ -72,3 +73,31 @@ class PublicUserAPITests(TestCase):
         # Make sure the above user is not available in the DB (i.e., not created)
         user = get_user_model().objects.filter(email=payload['email'])
         self.assertFalse(user.exists())
+
+    def test_create_token_for_new_user(self):
+        """Test generates token for valid credentials."""
+        user_info = self._get_payload()
+        _ = create_user(**user_info)
+
+        # Send a POST request to the token URL:
+        payload = {k: v for k, v in user_info.items() if k != 'name'}
+        res = self.client.post(TOKEN_URL, payload)
+
+        # Make sure the request is success & `token` is returned.
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn('token', res.data)
+
+    def test_create_token_bad_credentials_fail(self):
+        """"""
+        payload = self._get_payload()
+        # Create a new user with the above credentials.
+        _ = create_user(**payload)
+
+        # Modify the payload to have wrong credentials for the user.
+        # payload.update({'password': 'wrong_password'})
+        payload['password'] = 'wrong_password'
+        # Make a POST request to the `token` url with wrong credentials.
+        res = self.client.post(TOKEN_URL, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertNotIn('token', res.data)
