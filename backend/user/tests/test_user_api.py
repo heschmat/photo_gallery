@@ -14,6 +14,7 @@ from rest_framework.test import APIClient
 # `name` passed to `path` is `create`
 CREATE_USER_URL = reverse('user:create')
 TOKEN_URL = reverse('user:token')
+PROFILE_URL = reverse('user:me')
 
 
 def create_user(**params):
@@ -88,7 +89,7 @@ class PublicUserAPITests(TestCase):
         self.assertIn('token', res.data)
 
     def test_create_token_bad_credentials_fail(self):
-        """"""
+        """Test invalid credentials fail."""
         payload = self._get_payload()
         # Create a new user with the above credentials.
         _ = create_user(**payload)
@@ -101,3 +102,45 @@ class PublicUserAPITests(TestCase):
 
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertNotIn('token', res.data)
+
+    def test_profile_access_unauth_user_fail(self):
+        """Test only authenticated users have profile (access)"""
+        # Make an unauthenticated GET request to profile page.
+        res = self.client.get(PROFILE_URL)
+
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class AuthenticatedUserAPITests(TestCase):
+    """Test suits for authenticated users."""
+    def setUp(self):
+        # Create a new user & authenticate:
+        payload = {'email': 'user1@example.com', 'password': 'Whatever!', 'name': 'JJ'}
+        self.user = create_user(**payload)
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def test_retrieve_profile_ok(self):
+        """Test authenticated user can access their profile."""
+        res = self.client.get(PROFILE_URL)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data, {'email': self.user.email, 'name': self.user.name})
+
+    def test_post_method_profile_page_not_allowed(self):
+        """Test /api/user/me cannot be used for user creation.
+        /api/user/create is the proper endpoint for this purpose.
+        """
+        res = self.client.post(PROFILE_URL, {})
+        self.assertEqual(res.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_update_profile_ok(self):
+        """Test authenticated user can update their profile."""
+        payload_updated = {'name': 'Some other name', 'password': 'More s3cure pa$$'}
+        res = self.client.patch(PROFILE_URL, payload_updated)
+
+        # Fetch the recent data from the db.
+        self.user.refresh_from_db()
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.user.name, payload_updated['name'])
+        self.assertTrue(self.user.check_password(payload_updated['password']))
