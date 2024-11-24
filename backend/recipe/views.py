@@ -28,3 +28,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return serializers.RecipeSerializer
 
         return self.serializer_class
+
+    # `.perform_create()`
+    # This way we can override the behavior of Django when it saves a model in a ViewSet
+    def perform_create(self, serializer):
+        """Create a new recipe."""
+        # Assign the authenticated user to the created recipe.
+        serializer.save(user=self.request.user)

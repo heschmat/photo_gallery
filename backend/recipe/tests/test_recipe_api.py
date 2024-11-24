@@ -106,3 +106,22 @@ class AuthorizedRecipeAPITests(TestCase):
 
         serializer = RecipeDetailSerializer(recipe)
         self.assertEqual(res.data, serializer.data)
+
+    def test_create_recipe(self):
+        """Test creating a recipe."""
+        recipe_payload = {
+            'title': 'Random Recipe',
+            'time_minutes': 10,
+            'cost': Decimal('7.99')
+        }
+
+        res = self.client.post(RECIPES_URL, recipe_payload)
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+        recipe = Recipe.objects.get(id=res.data['id'])
+        # Make sure values match between the recipe saved in DB & the one returned from URL:
+        for k, v in recipe_payload.items():
+            self.assertEqual(getattr(recipe, k), v)
+        # Also make sure the assigned user to the recipe is the authenticated user.
+        self.assertEqual(recipe.user, self.user)
