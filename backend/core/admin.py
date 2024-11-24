@@ -38,3 +38,4 @@ class UserAdmin(BaseUserAdmin):
 # Register your models here.
 # Also pass our custom `UserAdmin` to register our desired changes as well.
 admin.site.register(models.User, UserAdmin)
+admin.site.register(models.Recipe)

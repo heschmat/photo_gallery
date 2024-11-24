@@ -5,6 +5,10 @@ Tests for models.
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 
+from decimal import Decimal
+
+from core import models
+
 
 class ModelTests(TestCase):
     """Test Models."""
@@ -40,3 +44,20 @@ class ModelTests(TestCase):
         )
         self.assertTrue(user.is_superuser)
         self.assertTrue(user.is_staff)
+
+    # Tests for Recipe Model --------------------------------------- #
+    def test_create_recipe_ok(self):
+        """Test user can create a recipe successfully."""
+        test_user = get_user_model().objects.create_user(
+            email='user1@example.com', password='Whatever!'
+        )
+
+        sample_recipe = models.Recipe.objects.create(
+            user=test_user,
+            title='A Sample Recipe',
+            time_minutes=5,
+            cost=Decimal('4.99'),
+            description='The most delicious snack you\'ve ever had',
+        )
+
+        self.assertEqual(str(sample_recipe), sample_recipe.title)
