@@ -39,3 +39,4 @@ class UserAdmin(BaseUserAdmin):
 # Also pass our custom `UserAdmin` to register our desired changes as well.
 admin.site.register(models.User, UserAdmin)
 admin.site.register(models.Recipe)
+admin.site.register(models.Tag)
