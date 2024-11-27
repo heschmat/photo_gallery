@@ -2,11 +2,11 @@
 Views for the *recipe* APIs.
 """
 
-from rest_framework import viewsets
+from rest_framework import viewsets, mixins
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 
-from core.models import Recipe
+from core.models import Recipe, Tag
 from recipe import serializers
 
 
@@ -35,3 +35,34 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Create a new recipe."""
         # Assign the authenticated user to the created recipe.
         serializer.save(user=self.request.user)
+
+
+class TagViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    """Manage tags in the database."""
+    serializer_class = serializers.TagSerializer
+    queryset = Tag.objects.all()
+    authentication_classes = [TokenAuthentication]  # who is the user (authentication)
+    permission_classes = [IsAuthenticated]  # is the user authorized?
+
+    def get_queryset(self):
+        # N.B. No need to check if user is authenticated, due to `permission_classes` set.
+        # if not self.request.user.is_authenticated:
+        #     # Return an empty queryset for unauthenticated users
+        #     return Tag.objects.none()
+        return self.queryset.filter(user=self.request.user).order_by('-name')
+
+
+"""
+authentication_classes = [TokenAuthentication]
+
+The request must include a valid token.
+If the token is valid, request.user is set to the authenticated user.
+If the token is invalid, request.user is set to `AnonymousUser`.
+
+# ----------------------------------------------------------
+permission_classes = [IsAuthenticated]
+
+If the user is authenticated (IsAuthenticated), they can proceed.
+If the user is unauthenticated, the API returns an HTTP 401 Unauthorized response,
+and the view’s logic (like get_queryset) is never executed.
+"""
