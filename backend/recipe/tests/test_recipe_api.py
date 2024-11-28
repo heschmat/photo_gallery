@@ -11,7 +11,7 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from core.models import Recipe
+from core.models import Recipe, Tag
 from recipe.serializers import (
     RecipeSerializer,
     RecipeDetailSerializer,
@@ -125,3 +125,47 @@ class AuthorizedRecipeAPITests(TestCase):
             self.assertEqual(getattr(recipe, k), v)
         # Also make sure the assigned user to the recipe is the authenticated user.
         self.assertEqual(recipe.user, self.user)
+
+    def test_create_recipe_with_new_tags(self):
+        payload = {
+            'title': 'Vejetable Taj Mahal',
+            'time_minutes': 30,
+            'cost': Decimal(13.5),
+            'tags': [{'name': 'Indian'}, {'name': 'Vegi'}]
+        }
+        # Because we're passing nested objects (the `tags` value),
+        # we pass `format=json` to make sure it'll get converted correctly.
+        res = self.client.post(RECIPES_URL, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+        recipes_fetched = Recipe.objects.filter(user=self.user)
+        self.assertEqual(recipes_fetched.count(), 1)  # we created 1 recipe
+
+        recipe = recipes_fetched[0]
+        self.assertEqual(recipe.tags.count(), 2)  # 2 tags is assigned to the recipe
+        for tag in payload['tags']:
+            recipe_tag = recipe.tags.filter(name=tag['name'], user=self.user)
+            self.assertTrue(recipe_tag.exists())
+
+    def test_create_recipe_with_existing_tags(self):
+        """Test cannot add the same tag to the recipe multiple times."""
+        tag_already_created = Tag.objects.create(user=self.user, name='old-tag')
+        payload = {
+            'title': 'Recipe Title',
+            'time_minutes': 1,
+            'cost': Decimal('9.99'),
+            'tags': [{'name': 'Indian'}, {'name': 'old-tag'}]
+        }
+        res = self.client.post(RECIPES_URL, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        recipes = Recipe.objects.filter(user=self.user)
+        self.assertEqual(recipes.count(), 1)  # we created 1 recipe above
+
+        recipe = recipes[0]
+        self.assertEqual(recipe.tags.count(), 2)  # the recipe should have 2 tags assigned
+        self.assertIn(tag_already_created, recipe.tags.all())
+        for tag in payload['tags']:
+            recipe_tag = recipe.tags.filter(name=tag['name'], user=self.user)
+            self.assertTrue(recipe_tag.exists())
