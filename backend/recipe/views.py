@@ -37,7 +37,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
 
-class TagViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+# N.B. make suer `GenericViewSet` comes aftre `**ModelMixin`.
+# `viewsets.GenericViewSet` class automatically maps HTTP methods
+# to the appropriate mixin methods, based on the Django REST Framework's conventions.
+class TagViewSet(
+    mixins.DestroyModelMixin,  # DELETE /api/tags/<id>/
+    mixins.UpdateModelMixin,  # PATCH|PUT /api/tags/<id>/
+    mixins.ListModelMixin,  # GET /api/tags/
+    viewsets.GenericViewSet
+):
     """Manage tags in the database."""
     serializer_class = serializers.TagSerializer
     queryset = Tag.objects.all()
@@ -65,4 +73,15 @@ permission_classes = [IsAuthenticated]
 If the user is authenticated (IsAuthenticated), they can proceed.
 If the user is unauthenticated, the API returns an HTTP 401 Unauthorized response,
 and the view’s logic (like get_queryset) is never executed.
+
+# -----------------------------------------------------------
+
+The DestroyModelMixin provides a default implementation of the destroy method.
+Here's how it works:
+```py
+def destroy(self, request, *args, **kwargs):
+    instance = self.get_object()
+    self.perform_destroy(instance)
+    return Response(status=status.HTTP_204_NO_CONTENT)
+```
 """

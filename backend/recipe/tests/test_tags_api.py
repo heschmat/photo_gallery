@@ -15,6 +15,10 @@ from recipe.serializers import TagSerializer
 TAGS_URL = reverse('recipe:tag-list')
 
 
+def get_tag_detail_url(idx):
+    return reverse('recipe:tag-detail', args=[idx])
+
+
 def create_user(payload={}):
     default = {'email': 'user@example.com', 'password': 'Whatever!'}
     default.update(payload)
@@ -69,3 +73,25 @@ class AuthenticatedTagsAPITests(TestCase):
         self.assertEqual(len(res.data), 1)
         self.assertEqual(res.data[0]['name'], tag_user1.name)
         self.assertEqual(res.data[0]['id'], tag_user1.id)
+
+    def test_update_tag(self):
+        tag = Tag.objects.create(user=self.user, name='Appetizers')
+
+        url = get_tag_detail_url(tag.id)
+        # Send a request to update the created tag:
+        payload = {'name': 'Sides'}
+        res = self.client.patch(url, payload)
+        tag.refresh_from_db()
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(tag.name, payload['name'])
+
+    def test_delete_tag(self):
+        tag = Tag.objects.create(user=self.user, name='Appetizers')
+        url = get_tag_detail_url(tag.id)
+        res = self.client.delete(url)
+        tags_fetched = Tag.objects.filter(user=self.user)
+
+        self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+        # Since we just created 1 tag for the user; removing it leaves no tags left.
+        self.assertFalse(tags_fetched.exists())
