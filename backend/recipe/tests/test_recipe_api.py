@@ -169,3 +169,49 @@ class AuthorizedRecipeAPITests(TestCase):
         for tag in payload['tags']:
             recipe_tag = recipe.tags.filter(name=tag['name'], user=self.user)
             self.assertTrue(recipe_tag.exists())
+
+    def test_create_tag_on_update_recipe(self):
+        """Test."""
+        recipe = create_recipe(user=self.user)
+        recipe_url = get_recipe_detail_url(recipe.id)
+
+        payload = {'tags': [{'name': 'Lunch'}]}
+        res = self.client.patch(recipe_url, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        tag = Tag.objects.get(user=self.user, name=payload['tags'][0]['name'])
+        self.assertIn(tag, recipe.tags.all())
+
+    def test_modify_tag_on_update_recipe(self):
+        """Test."""
+        tag1 = Tag.objects.create(user=self.user, name='tag1')
+        tag2 = Tag.objects.create(user=self.user, name='tag2')
+
+        # Create a recipe & add `tag1` to it:
+        recipe = create_recipe(user=self.user)
+        recipe.tags.add(tag1)
+        recipe_url = get_recipe_detail_url(recipe.id)
+
+        # Update the recipe with a new tag, `tag2`:
+        payload = {'tags': [{'name': 'tag2'}]}
+        res = self.client.patch(recipe_url, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn(tag2, recipe.tags.all())  # tag2 should belong to recipe
+        self.assertNotIn(tag1, recipe.tags.all())  # we've removed tag1 from recipe
+
+    def test_clear_recipe_tags(self):
+        """Test."""
+        recipe = create_recipe(user=self.user)
+        recipe_url = get_recipe_detail_url(recipe.id)
+        # Add a couple of tags to the recipe:
+        for i in range(3):
+            tag = Tag.objects.create(user=self.user, name=f'tag-{i}')
+            recipe.tags.add(tag)
+
+        # Remove the assigned tags.
+        payload = {'tags': []}
+        res = self.client.patch(recipe_url, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(recipe.tags.count(), 0)  # we've cleared all the tags
