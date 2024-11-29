@@ -11,7 +11,7 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from core.models import Recipe, Tag
+from core.models import Recipe, Tag, Ingredient
 from recipe.serializers import (
     RecipeSerializer,
     RecipeDetailSerializer,
@@ -215,3 +215,43 @@ class AuthorizedRecipeAPITests(TestCase):
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(recipe.tags.count(), 0)  # we've cleared all the tags
+
+    def test_create_recipe_with_new_ingredients(self):
+        payload = {
+            'title': 'chicken curry',
+            'time_minutes': 45,
+            'cost': Decimal('13.5'),
+            'ingredients': [{'name': 'Coconut milk'}, {'name': 'Curry powder'}]
+        }
+        res = self.client.post(RECIPES_URL, payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+        recipes_fetched = Recipe.objects.filter(user=self.user)  # 1 recipe is available
+        self.assertEqual(recipes_fetched.count(), 1)
+
+        recipe = recipes_fetched[0]
+        self.assertEqual(recipe.ingredients.count(), 2)  # recipe payload has 2 ingredients
+        for itm in payload['ingredients']:
+            ingredient = recipe.ingredients.filter(user=self.user, name=itm['name'])
+            self.assertTrue(ingredient.exists())
+
+    def test_create_recipe_with_existing_ingredients(self):
+        """
+        Test duplicates are recorded once.
+        NOTE: some tests are ommitted as they're very similar to the tests in
+        `test_create_recipe_with_new_ingredients`.
+        """
+        ingredient_0 = Ingredient.objects.create(user=self.user, name='Curry powder')
+        payload = {
+            'title': 'chicken curry',
+            'time_minutes': 45,
+            'cost': Decimal('13.5'),
+            'ingredients': [{'name': 'Coconut milk'}, {'name': 'Curry powder'}]
+        }
+        _ = self.client.post(RECIPES_URL, payload, format='json')
+        recipes_fetched = Recipe.objects.filter(user=self.user)
+        recipe = recipes_fetched[0]
+        # Check if the already created recipe is in the ingredients list of recipe:
+        self.assertIn(ingredient_0, recipe.ingredients.all())
+        # Make sure the ingredient is not duplicated, duplicates are recorded only once:
+        self.assertEqual(recipe.ingredients.count(), 2)

@@ -26,10 +26,11 @@ class IngredientSerializer(serializers.ModelSerializer):
 class RecipeSerializer(serializers.ModelSerializer):
     """Serializer for recipes."""
     tags = TagSerializer(many=True, required=False)
+    ingredients = IngredientSerializer(many=True, required=False)
 
     class Meta:
         model = Recipe
-        fields = ['id', 'title', 'time_minutes', 'cost', 'link', 'tags']
+        fields = ['id', 'title', 'time_minutes', 'cost', 'link', 'tags', 'ingredients']
         read_only_fields = ['id']
 
     def _get_or_create_tags(self, tags, recipe):
@@ -42,15 +43,25 @@ class RecipeSerializer(serializers.ModelSerializer):
             tag_obj, created = Tag.objects.get_or_create(user=user_authenticated, **tag)
             recipe.tags.add(tag_obj)
 
+    def _get_or_create_ingredients(self, ingredients, recipe):
+        user_authenticated = self.context['request'].user
+        for ingredient in ingredients:
+            obj, is_created = Ingredient.objects.get_or_create(
+                user=user_authenticated, **ingredient
+            )
+            recipe.ingredients.add(obj)
+
     # Add "write" functionality to our nested serializer.
     # By default, they'll be read-only.
     def create(self, validated_data):
         """Create a recipe."""
         # Remove the `tag` key from the recipe payload.
         recipe_tags = validated_data.pop('tags', [])
+        recipe_ingredients = validated_data.pop('ingredients', [])
         # `create` the recipe with the payload (no tags)
         recipe = Recipe.objects.create(**validated_data)
         self._get_or_create_tags(recipe_tags, recipe)
+        self._get_or_create_ingredients(recipe_ingredients, recipe)
         return recipe
 
     def update(self, instance, validated_data):
