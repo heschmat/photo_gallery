@@ -255,3 +255,51 @@ class AuthorizedRecipeAPITests(TestCase):
         self.assertIn(ingredient_0, recipe.ingredients.all())
         # Make sure the ingredient is not duplicated, duplicates are recorded only once:
         self.assertEqual(recipe.ingredients.count(), 2)
+
+    def test_create_ingredient_on_update_recipe(self):
+        """Test."""
+        recipe = create_recipe(user=self.user)
+        recipe_url = get_recipe_detail_url(recipe.id)
+
+        payload = {'ingredients': [{'name': 'Salt'}]}
+        res = self.client.patch(recipe_url, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        ingredient_name = payload['ingredients'][0]['name']
+        ingredient = Ingredient.objects.get(user=self.user, name=ingredient_name)
+        self.assertIn(ingredient, recipe.ingredients.all())
+
+    def test_modify_ingredient_on_update_recipe(self):
+        """Test."""
+        ingredient1 = Ingredient.objects.create(user=self.user, name='ingredient-1')
+        ingredient2 = Ingredient.objects.create(user=self.user, name='ingredient-2')
+
+        # Create a recipe & add `tag1` to it:
+        recipe = create_recipe(user=self.user)
+        recipe.ingredients.add(ingredient1)
+        recipe_url = get_recipe_detail_url(recipe.id)
+
+        # Update the recipe with a new tag, `tag2`:
+        payload = {'ingredients': [{'name': 'ingredient-2'}]}
+        res = self.client.patch(recipe_url, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        # ingredient1 was removed from recipe& ingredient2 should belong to recipe
+        self.assertNotIn(ingredient1, recipe.ingredients.all())
+        self.assertIn(ingredient2, recipe.ingredients.all())
+
+    def test_clear_recipe_ingredients(self):
+        """Test."""
+        recipe = create_recipe(user=self.user)
+        recipe_url = get_recipe_detail_url(recipe.id)
+        # Add a couple of tags to the recipe:
+        for i in range(3):
+            ingredient = Ingredient.objects.create(user=self.user, name=f'ingredient-{i}')
+            recipe.ingredients.add(ingredient)
+
+        # Remove the assigned tags.
+        payload = {'ingredients': []}
+        res = self.client.patch(recipe_url, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(recipe.ingredients.count(), 0)  # we've cleared all the ingredients
