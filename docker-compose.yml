@@ -11,6 +11,7 @@ services:
     # enables automatic sync between local & the docker env.
     volumes:
       - ./backend:/code
+      - dev-static-data:/vol/web
     # default command to run; can be overwritten by docker-compose explict command
     command: >
       sh -c "python manage.py wait_for_db &&
@@ -30,3 +31,4 @@ services:
 
 volumes:
   dev-db-data:
+  dev-static-data:
